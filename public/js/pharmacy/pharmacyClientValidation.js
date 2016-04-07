@@ -1,4 +1,12 @@
 $(document).ready(function () {
+    var disclaimer = $("#disclaimer");
+    disclaimer.click(function() {
+        if (!$(this).is(":checked")) {
+            $("#pharmacySubmitBtn").attr("disabled", "disabled");
+
+        } else {
+            $("#pharmacySubmitBtn").removeAttr("disabled");
+        }
     $("form").submit(function(event) {
         var pass = true;
         if (checkReplacementPrescriptions() === false) {
@@ -8,7 +16,7 @@ $(document).ready(function () {
 
         return pass;
     })
-});
+    })});
 
 function checkReplacementPrescriptions() {
 
