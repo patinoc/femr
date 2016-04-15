@@ -25,6 +25,17 @@
     cursor: pointer;
 }
 
+
+
+.center-block{
+    width: 290px;
+    margin: 20px auto;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+
 /*User form response*/
 .createUserError {
     color: rgb(198, 0, 0);

@@ -11,6 +11,12 @@ $(document).ready(function () {
         manageUsers.bindUserToggleButtons();
     }
 
+    $('#userTable').DataTable( {
+        bFilter: false,
+        "pagingType": "numbers",
+        "ordering": false
+    } );
+
 
 });
 
