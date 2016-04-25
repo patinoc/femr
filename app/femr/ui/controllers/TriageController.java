@@ -18,10 +18,7 @@ import org.joda.time.DateTime;
 import play.data.Form;
 import play.mvc.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Security.Authenticated(FEMRAuthenticated.class)
@@ -158,9 +155,27 @@ public class TriageController extends Controller {
         //or get current patient for new encounter
         ServiceResponse<PatientItem> patientServiceResponse;
         PatientItem patientItem;
-        if (id == 0) {
-            patientItem = populatePatientItem(viewModel, currentUser);
+        Date today = new Date();
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(viewModel.getAge());
+        int birth_year = cal.get(Calendar.YEAR);
+        cal.setTime(today);
+        int today_year = cal.get(Calendar.YEAR);
+        int age = today_year - birth_year;
+        String classification = viewModel.getAgeClassification();
+        if (!(age <= 1 && classification.equals("infant") ||
+                age >= 2 && age <= 12 && classification.equals("child") ||
+                age >= 13 && age <= 17 && classification.equals("teen") ||
+                age >= 18 && age <= 64 && classification.equals("adult") ||
+                age >= 65 && classification.equals("elder"))) {
+            // Date and classification do not match up
+            return redirect(routes.TriageController.indexGet());
+
+        }
+            if (id == 0) {
+                patientItem = populatePatientItem(viewModel, currentUser);
             patientServiceResponse = patientService.createPatient(patientItem);
+
         } else {
             patientServiceResponse = patientService.updateSex(id, viewModel.getSex());
         }
@@ -177,81 +192,86 @@ public class TriageController extends Controller {
 
 
         List<String> chiefComplaints = parseChiefComplaintsJSON(viewModel.getChiefComplaint(), viewModel.getChiefComplaintsJSON());
-        ServiceResponse<PatientEncounterItem> patientEncounterServiceResponse = encounterService.createPatientEncounter(patientItem.getId(), currentUser.getId(), currentUser.getTripId(), viewModel.getAgeClassification(), chiefComplaints);
-        PatientEncounterItem patientEncounterItem;
-        if (patientEncounterServiceResponse.hasErrors()) {
-
-            throw new RuntimeException();
-        } else {
-
-            patientEncounterItem = patientEncounterServiceResponse.getResponseObject();
-        }
-
-        //save new vitals - check to make sure the vital exists
-        //before putting it in the map. This can be done more
-        //efficiently with JSON from the view
-        Map<String, Float> newVitals = new HashMap<>();
-        if (viewModel.getRespiratoryRate() != null) {
-            newVitals.put("respiratoryRate", viewModel.getRespiratoryRate().floatValue());
-        }
-        if (viewModel.getHeartRate() != null) {
-            newVitals.put("heartRate", viewModel.getHeartRate().floatValue());
-        }
-
-        //Alaa Serhan
-        if (viewModel.getTemperature() != null) {
-            Float temperature = viewModel.getTemperature();
-            newVitals.put("temperature", temperature);
-        }
-
-        if (viewModel.getOxygenSaturation() != null) {
-            newVitals.put("oxygenSaturation", viewModel.getOxygenSaturation());
-        }
 
 
-        if (viewModel.getHeightFeet() != null) {
-            Float heightFeet = viewModel.getHeightFeet().floatValue();
-            newVitals.put("heightFeet", heightFeet);
-        }
+            ServiceResponse<PatientEncounterItem> patientEncounterServiceResponse = encounterService.createPatientEncounter(patientItem.getId(), currentUser.getId(), currentUser.getTripId(), viewModel.getAgeClassification(), chiefComplaints);
 
-        if (viewModel.getHeightInches() != null) {
-           Float heightInches = viewModel.getHeightInches().floatValue();
-            newVitals.put("heightInches", heightInches);
-        }
+            PatientEncounterItem patientEncounterItem;
+            if (patientEncounterServiceResponse.hasErrors()) {
 
-        //Alaa Serhan
-        if (viewModel.getWeight() != null) {
-            Float weight = viewModel.getWeight();
-            newVitals.put("weight", weight);
-        }
+                throw new RuntimeException();
+            } else {
 
-        if (viewModel.getBloodPressureSystolic() != null) {
-            newVitals.put("bloodPressureSystolic", viewModel.getBloodPressureSystolic().floatValue());
-        }
+                patientEncounterItem = patientEncounterServiceResponse.getResponseObject();
+            }
 
-        if (viewModel.getBloodPressureDiastolic() != null) {
-            newVitals.put("bloodPressureDiastolic", viewModel.getBloodPressureDiastolic().floatValue());
-        }
+            //save new vitals - check to make sure the vital exists
+            //before putting it in the map. This can be done more
+            //efficiently with JSON from the view
+            Map<String, Float> newVitals = new HashMap<>();
+            if (viewModel.getRespiratoryRate() != null) {
+                newVitals.put("respiratoryRate", viewModel.getRespiratoryRate().floatValue());
+            }
+            if (viewModel.getHeartRate() != null) {
+                newVitals.put("heartRate", viewModel.getHeartRate().floatValue());
+            }
 
-        if (viewModel.getGlucose() != null) {
-            newVitals.put("glucose", viewModel.getGlucose().floatValue());
-        }
+            //Alaa Serhan
+            if (viewModel.getTemperature() != null) {
+                Float temperature = viewModel.getTemperature();
+                newVitals.put("temperature", temperature);
+            }
 
-		 if (viewModel.getWeeksPregnant() != null) { /*Sam Zanni*/
-            newVitals.put("weeksPregnant", viewModel.getWeeksPregnant().floatValue());
-        }
-		
-        ServiceResponse<List<VitalItem>> vitalServiceResponse = vitalService.createPatientEncounterVitalItems(newVitals, currentUser.getId(), patientEncounterItem.getId());
-        if (vitalServiceResponse.hasErrors()) {
-            throw new RuntimeException();
-        }
+            if (viewModel.getOxygenSaturation() != null) {
+                newVitals.put("oxygenSaturation", viewModel.getOxygenSaturation());
+            }
 
-        if (isDiabetesPromptTurnedOn() && viewModel.getIsDiabetesScreenPerformed().equals("true")){
-            ServiceResponse<PatientEncounterItem> diabetesScreenServiceResponse = encounterService.screenPatientForDiabetes(patientEncounterItem.getId(), currentUser.getId());
-            if (diabetesScreenServiceResponse.hasErrors()){
+
+            if (viewModel.getHeightFeet() != null) {
+                Float heightFeet = viewModel.getHeightFeet().floatValue();
+                newVitals.put("heightFeet", heightFeet);
+            }
+
+            if (viewModel.getHeightInches() != null) {
+                Float heightInches = viewModel.getHeightInches().floatValue();
+                newVitals.put("heightInches", heightInches);
+            }
+
+            //Alaa Serhan
+            if (viewModel.getWeight() != null) {
+                Float weight = viewModel.getWeight();
+                newVitals.put("weight", weight);
+            }
+
+            if (viewModel.getBloodPressureSystolic() != null) {
+                newVitals.put("bloodPressureSystolic", viewModel.getBloodPressureSystolic().floatValue());
+            }
+
+            if (viewModel.getBloodPressureDiastolic() != null) {
+                newVitals.put("bloodPressureDiastolic", viewModel.getBloodPressureDiastolic().floatValue());
+            }
+
+            if (viewModel.getGlucose() != null) {
+                newVitals.put("glucose", viewModel.getGlucose().floatValue());
+            }
+
+            if (viewModel.getWeeksPregnant() != null) { /*Sam Zanni*/
+                newVitals.put("weeksPregnant", viewModel.getWeeksPregnant().floatValue());
+            }
+
+            ServiceResponse<List<VitalItem>> vitalServiceResponse = vitalService.createPatientEncounterVitalItems(newVitals, currentUser.getId(), patientEncounterItem.getId());
+            if (vitalServiceResponse.hasErrors()) {
                 throw new RuntimeException();
             }
-        }
+
+            if (isDiabetesPromptTurnedOn() && viewModel.getIsDiabetesScreenPerformed().equals("true")) {
+                ServiceResponse<PatientEncounterItem> diabetesScreenServiceResponse = encounterService.screenPatientForDiabetes(patientEncounterItem.getId(), currentUser.getId());
+                if (diabetesScreenServiceResponse.hasErrors()) {
+                    throw new RuntimeException();
+                }
+            }
+
+
 
         return redirect(routes.HistoryController.indexPatientGet(Integer.toString(patientServiceResponse.getResponseObject().getId())));
     }
