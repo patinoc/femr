@@ -23,6 +23,10 @@ import play.mvc.Controller;
 import play.mvc.Result;
 import play.mvc.Security;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -279,6 +283,7 @@ public class MedicalController extends Controller {
         //get and save problems
         List<String> problemList = new ArrayList<>();
         for (ProblemItem pi : viewModelPost.getProblems()) {
+            System.out.println(pi.getName());
             if (StringUtils.isNotNullOrWhiteSpace(pi.getName())) {
                 problemList.add(pi.getName());
             }
@@ -383,7 +388,28 @@ public class MedicalController extends Controller {
             }
         }
 
-
+        // Create entry for updated problem
+        Date today = new Date();
+        StringBuilder sb = new StringBuilder();
+        sb.append(today.toString() + " Updates:");
+        sb.append("\n");
+        for(String str : problemList)
+        {
+            sb.append(str);
+            sb.append("\n");
+        }
+        sb.append("Updated by: ");
+        sb.append(currentUserSession.getFirstName() + " " + currentUserSession.getLastName());
+        sb.append("\n");
+        try(FileWriter fw = new FileWriter("logs/application.log", true);
+            BufferedWriter bw = new BufferedWriter(fw);
+            PrintWriter out = new PrintWriter(bw)) {
+            out.println(sb.toString());
+        }
+            catch(IOException e)
+        {
+            System.err.println("Could not write to file");
+        }
 
         String message = "Patient information for " + patientItem.getFirstName() + " " + patientItem.getLastName() + " (id: " + patientItem.getId() + ") was saved successfully.";
 
